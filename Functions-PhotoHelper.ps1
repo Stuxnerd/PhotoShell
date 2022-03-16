@@ -219,8 +219,8 @@ function Move-PhotoFiles {
 	)
 	Process {
 		#Pfade anpassen
-		Normalize-Path -FolderName $BasicPath | Out-Null
-		Normalize-Path -FolderName $DestinationSubPath | Out-Null
+		Get-NormalizedPath -FolderName $BasicPath | Out-Null
+		Get-NormalizedPath -FolderName $DestinationSubPath | Out-Null
 		[int]$MoveCount = 0 #zählen der jeweils verschobenen Dateien
 		Trace-LogMessage -Message "Suche Dateien vom Typ: $Name" -Level 1 -MessageType Confirmation -Indent 1
 
@@ -370,8 +370,8 @@ function Split-PanoramaFiles {
 	)
 	Process {
 		#Pfade anpassen
-		Normalize-Path -FolderName $BasicPath | Out-Null
-		Normalize-Path -FolderName $DestinationSubPath | Out-Null
+		Get-NormalizedPath -FolderName $BasicPath | Out-Null
+		Get-NormalizedPath -FolderName $DestinationSubPath | Out-Null
 		Trace-LogMessage -Message "Sortiere Panoramen" -Level 1 -MessageType Confirmation -Indent 1
 
 		#es muss unterschieden werden, zwischen einem einzelnen Ordner-Pfad (ohne Unterordner für den Tag) und mehreren Ordner-Pfaden
@@ -502,8 +502,8 @@ function Move-HDRFiles {
 	)
 	Process {
 		#Pfade anpassen
-		Normalize-Path -FolderName $BasicPath | Out-Null
-		Normalize-Path -FolderName $DestinationSubPath | Out-Null
+		Get-NormalizedPath -FolderName $BasicPath | Out-Null
+		Get-NormalizedPath -FolderName $DestinationSubPath | Out-Null
 		[int]$MoveCount = 0 #zählen der jeweils verschobenen Dateien
 		Trace-LogMessage -Message "Sortiere HDR" -Level 1 -MessageType Confirmation -Indent 1
 
