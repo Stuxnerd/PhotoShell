@@ -20,7 +20,7 @@
 	LICENSE: This script is licensed under GNU General Public License version 3.0 (GPLv3).
 		Find more information at http://www.gnu.org/licenses/gpl.html
 
-	TODO: @Stuxnerd
+	TODO:
 	* Adapt format of file to common design
 	* Translate to English
 #>
