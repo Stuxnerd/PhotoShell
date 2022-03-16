@@ -1,27 +1,26 @@
 ﻿<#
 .SYNOPSIS
-	The script includes several useful functions which are used by several scripts.
+	The script includes several useful functions which are used by several scripts to manage photo.
 .DESCRIPTION
 	This script includes these functions:
 	* Get-MetaDataFromFile
 	* Find-AlphaNumericSuccessorAndPredecessorFile
 	* Get-FolderNameFromDate
 	* Move-PhotoFiles
-	* Move-HDRFiles
 	* Sort-PanoramaFiles
-	Assumptions:
-	 1. ???
+	* Move-HDRFiles
 .LINK
 	https://github.com/Stuxnerd/PhotoShell.git
-.VERSION
-	0.1.2 - 2022-03-02
-.AUTHOR
-	Stuxnerd
-	If you want to support me: bitcoin:19sbTycBKvRdyHhEyJy5QbGn6Ua68mWVwC
-.LICENSE
-	This script is licensed under GNU General Public License version 3.0 (GPLv3).
-	Find more information at http://www.gnu.org/licenses/gpl.html
-.TODO
+.NOTES
+	VERSION: 0.1.3 - 2022-03-16
+
+	AUTHOR: @Stuxnerd
+		If you want to support me: bitcoin:19sbTycBKvRdyHhEyJy5QbGn6Ua68mWVwC
+
+	LICENSE: This script is licensed under GNU General Public License version 3.0 (GPLv3).
+		Find more information at http://www.gnu.org/licenses/gpl.html
+
+	TODO: @Stuxnerd
 	* Adapt format of file to common design
 	* Translate to English
 #>
@@ -341,6 +340,8 @@ function Move-PhotoFiles {
 <#
 .SYNOPSIS
 	TODO
+.DESCRIPTION
+	TODO
 .PARAMETER $ReadHost
 	TODO
 .PARAMETER $BasicPath
@@ -350,8 +351,6 @@ function Move-PhotoFiles {
 .PARAMETER $FileTypes
 	TODO
 .PARAMETER $AccessSubFoldersForEachDate
-	TODO
-.DESCRIPTION
 	TODO
 #>
 function Split-PanoramaFiles {
@@ -467,6 +466,8 @@ function Split-PanoramaFiles {
 <#
 .SYNOPSIS
 	TODO
+.DESCRIPTION
+	TODO
 .PARAMETER $ReadHost
 	TODO
 .PARAMETER $BasicPath
@@ -476,8 +477,6 @@ function Split-PanoramaFiles {
 .PARAMETER $FileTypes
 	TODO
 .PARAMETER $AccessSubFoldersForEachDate
-	TODO
-.DESCRIPTION
 	TODO
 #>
 function Move-HDRFiles {
