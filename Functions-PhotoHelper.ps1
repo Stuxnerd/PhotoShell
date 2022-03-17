@@ -103,13 +103,14 @@ Function Export-Files {
 		[Parameter(Mandatory = $True, Position = 4)]
 		[String]$TargetPath,
 
-		#Counter for moved/copied files
+		#refernece to external counter for moved/copied files
 		[Parameter(Mandatory = $False, Position = 5)]
 		[REF]$ExternalCounter = 0
 		
-	) #Ende der Definition der Parameter
+	)
 	#setup LOCAL counter
 	[int]$Counter = 0
+	
 	#Ensure the folder does exist
 	TestAndCreate-Path -FolderName $TargetPath
 
