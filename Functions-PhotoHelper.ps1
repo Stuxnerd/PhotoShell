@@ -12,7 +12,7 @@
 .LINK
 	https://github.com/Stuxnerd/PhotoShell.git
 .NOTES
-	VERSION: 0.1.3 - 2022-03-16
+	VERSION: 0.2.0 - 2022-03-17
 
 	AUTHOR: @Stuxnerd
 		If you want to support me: bitcoin:19sbTycBKvRdyHhEyJy5QbGn6Ua68mWVwC
@@ -63,12 +63,96 @@
 #####################
 
 
+<#
+.SYNOPSIS
+	Funktion, um Dateien zu verschieben oder kopieren
+.PARAMETER $Action
+	"Copy" or "Move"
+.PARAMETER $FileType
+	Dateitypen
+.PARAMETER $SourcePath
+	Quellordner der Dateien
+.PARAMETER $TargetPath
+	Zielordner der Dateien
+.PARAMETER $ExternalCounter
+	REFERENCE to an external counter which might be used for several instances of Export-Files
+	is not mandatory and starts with 0, if not set
+.EXAMPLE
+	[int]$global:TotalSum = 0
+	Export-Files -Action "Copy" -FileType "*.JPG" -ExternalCounter ([REF]$global:TotalSum) -SourcePath "\JPG\" -TargetPath "C:\"
+.DESCRIPTION
+	TODO
+#>
+Function Export-Files {
+	Param(
+		#Angabe, ob die Dateien kopiert oder verschoben werden sollen
+		[Parameter(Mandatory = $True, Position = 1)]
+		[ValidateSet("Copy", "Move")]
+		[String]$Action,
 
-###################################
-#Funktion, um EXIF-Daten auszulesen
-#http://www.administrator.de/wissen/erweiterte-dateieigenschaften-powershell-funktion-abfragen-223082.html
-#http://blogs.technet.com/b/heyscriptingguy/archive/2014/02/06/use-powershell-to-find-metadata-from-photograph-files.aspx
-#https://gallery.technet.microsoft.com/scriptcenter/get-file-meta-data-function-f9e8d804
+		#Dateitypen
+		[Parameter(Mandatory = $True, Position = 2)]
+		[String]$FileType,
+
+		#Quellordner der Dateien
+		[Parameter(Mandatory = $True, Position = 3)]
+		[String]$SourcePath,
+		
+		#Zielordner der Dateien
+		[Parameter(Mandatory = $True, Position = 4)]
+		[String]$TargetPath,
+
+		#Counter for moved/copied files
+		[Parameter(Mandatory = $False, Position = 5)]
+		[REF]$ExternalCounter = 0
+		
+	) #Ende der Definition der Parameter
+	#setup LOCAL counter
+	[int]$Counter = 0
+	#Ensure the folder does exist
+	TestAndCreate-Path -FolderName $TargetPath
+
+	$Files = Get-ChildItem -Path $SourcePath -ErrorAction SilentlyContinue
+	foreach ($File in $Files) {
+		#Unterscheidung und Durchführung der Aktion
+		if ($Action -eq "Copy") {
+			Copy-Item -Path $File.FullName -Destination $TargetPath -Include $FileType -Force -ErrorAction SilentlyContinue 
+			#increment all counters (local and external)
+			$Counter++
+			$ExternalCounter.Value++
+		}
+		if ($Action -eq "Move") {
+			Move-Item -Path $File.FullName -Destination $TargetPath -Include $FileType -Force -ErrorAction SilentlyContinue
+			#increment all counters (local and external)
+			$Counter++
+			$ExternalCounter.Value++
+		}
+	}
+	if ($Action -eq "Copy") {
+		Trace-LogMessage -Message "$Counter Dateien vom Ordner $SourcePath in den Ordner $TargetPath kopiert."
+	}
+	if ($Action -eq "Move") {
+		Trace-LogMessage -Message  "$Counter Dateien vom Ordner $SourcePath in den Ordner $TargetPath verschoben."
+	}
+}
+
+
+<#
+.SYNOPSIS
+	Funktion, um EXIF-Daten auszulesen
+.PARAMETER $FileName
+	Dateiname
+.PARAMETER $Properties
+	Namen der Eigenschaften
+.PARAMETER $MaxPropertyCount
+	Anzahl der Eigenschaftsfelder (308 empirisch ermittelt)
+.LINK
+	* http://www.administrator.de/wissen/erweiterte-dateieigenschaften-powershell-funktion-abfragen-223082.html
+	* http://blogs.technet.com/b/heyscriptingguy/archive/2014/02/06/use-powershell-to-find-metadata-from-photograph-files.aspx
+	* https://gallery.technet.microsoft.com/scriptcenter/get-file-meta-data-function-f9e8d804
+.DESCRIPTION
+	TODO
+#>
 Function Get-MetaDataFromFile {
 	Param(
 		[String]$FileName, #Dateiname
@@ -106,8 +190,19 @@ Function Get-MetaDataFromFile {
 	}
 }
 
-##############################################
-#Funktion um umgebende Dateinamen zu ermitteln
+
+<#
+.SYNOPSIS
+	Funktion um umgebende Dateinamen (ähnliche Nummerierung) zu ermitteln
+.PARAMETER $Filename
+	Dateiname
+.PARAMETER $Offset
+	bestimmen, welche umgebende Anzhal Dateien ermittelt wird
+.PARAMETER $DigitCount
+	Anzahl der Stellen in der Datei, die betrachtet werden (bisher keine Auswirkung)
+.DESCRIPTION
+	TODO
+#>
 Function Find-AlphaNumericSuccessorAndPredecessorFile {
 	Param(
 		[String]$Filename, #Dateiname
@@ -129,7 +224,7 @@ Function Find-AlphaNumericSuccessorAndPredecessorFile {
 	[int]$NewNumber = $ContainedNumber + $Offset
 	if($NewNumber -le 0) {
 		$NewNumber += 9999 #es gibt keine 0000-Datei bei Canon 600D
-		Write-Host "Stellenunterlauf bei $($File.Fullname)" -ForegroundColor DarkMagenta
+		Trace-LogMessage -Message "Stellenunterlauf bei $($File.Fullname)" -ForegroundColor DarkMagenta
 	}
 	#Umwandeln in einen String der richtigen Länge (ggf. mit 0 befüllen)
 	[String]$NewNumberString = $NewNumber
@@ -150,8 +245,14 @@ Function Find-AlphaNumericSuccessorAndPredecessorFile {
 }
 
 
-############################################################################
-#Funktion um ein gegebenes Datum in den zu nutzenden Ordnernamen umzuwandeln
+<#
+.SYNOPSIS
+	Funktion um ein gegebenes Datum in den zu nutzenden Ordnernamen umzuwandeln
+.PARAMETER $Date
+	Da nicht immer ein Datum korrekt übergeben wird, gibt es ein Fallback
+.DESCRIPTION
+	TODO
+#>
 Function Get-FolderNameFromDate {
 	Param(
 		[String]$Date #Datum (31.12.2015)
