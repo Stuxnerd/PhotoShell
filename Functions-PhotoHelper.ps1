@@ -3,6 +3,7 @@
 	The script includes several useful functions which are used by several scripts to manage photo.
 .DESCRIPTION
 	This script includes these functions:
+	* Export-Files
 	* Get-MetaDataFromFile
 	* Find-AlphaNumericSuccessorAndPredecessorFile
 	* Get-FolderNameFromDate
