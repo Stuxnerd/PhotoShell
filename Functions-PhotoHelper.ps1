@@ -1,10 +1,12 @@
 ﻿<#
 .SYNOPSIS
-	The script includes several useful functions which are used by several scripts to manage photo.
+	The script includes several useful functions which are used by several scripts to manage photos.
 .DESCRIPTION
+	Assumptions:
+	* The names for EXIF properties are in German language
 	This script includes these functions:
 	* Export-Files
-	* Get-MetaDataFromFile
+	* Get-ExifDataFromFile
 	* Find-AlphaNumericSuccessorAndPredecessorFile
 	* Get-FolderNameFromDate
 	* Move-PhotoFiles
@@ -26,168 +28,165 @@
 	* Translate to English
 #>
 
-#####################################
-#USAGE OF EXTERNAL FUNCTION PACKAGES#
-#####################################
+###########################################
+#INTEGRATION OF EXTERNAL FUNCTION PACKAGES#
+###########################################
 
 #is based on https://github.com/Stuxnerd/PsBuS
 . ../PsBuS/Functions-Logging.ps1
 . ../PsBuS/Functions-Support.ps1
 
 
-##################################
-#GLOBAL VARIABLES - RETURN VALUES#
-##################################
-#the global variables are used to save the return values of functions; they are just for usage of the funtions
-
-#not used in this script
-
-
-####################################
-#GLOBAL VARIABLES - VARIABLE VALUES#
-####################################
-#these values are used during execution, but are independent from a single fuction invocation
-
-#not used in this script
-
-
-#############################################
-#VARIABLES FOR THE SETTING - CONSTANT VALUES#
-#############################################
-#these values define the configuration of the script; the might be overwritten by an external script which is using included functions
-
-#not used in this script
-
-
 #####################
 #FUNCTION DEFINITION#
 #####################
 
-
 <#
 .SYNOPSIS
-	Funktion, um Dateien zu verschieben oder kopieren
+	Function to Move or copy files of a folder
+.DESCRIPTION
+	Function to Move or copy files of a folder
+	The magic is a counter to check for several instances if the copy process was successfull
+	A common issue are duplicate filenames, which overwrite exisitng files (but sometimes this is desired)
 .PARAMETER $Action
 	"Copy" or "Move"
 .PARAMETER $FileType
-	Dateitypen
+	type of files in the form: "*.JPG"
+	TODO: support several filestypes
 .PARAMETER $SourcePath
-	Quellordner der Dateien
+	full source path 
 .PARAMETER $TargetPath
-	Zielordner der Dateien
+	full destination path 
 .PARAMETER $ExternalCounter
-	REFERENCE to an external counter which might be used for several instances of Export-Files
+	optional REFERENCE to an external counter which might be used for several instances of Export-Files
 	is not mandatory and starts with 0, if not set
 .EXAMPLE
 	[int]$global:TotalSum = 0
-	Export-Files -Action "Copy" -FileType "*.JPG" -ExternalCounter ([REF]$global:TotalSum) -SourcePath "\JPG\" -TargetPath "C:\"
-.DESCRIPTION
-	TODO
+	Export-Files -Action "Copy" -FileType "*.JPG" -ExternalCounter ([REF]$global:TotalSum) -SourcePath "C:\JPG\" -TargetPath "D:\Final\"
+	will copy all JPG files from source to destination
 #>
 Function Export-Files {
 	Param(
-		#Angabe, ob die Dateien kopiert oder verschoben werden sollen
+		#"Copy" or "Move"
 		[Parameter(Mandatory = $True, Position = 1)]
 		[ValidateSet("Copy", "Move")]
 		[String]$Action,
 
-		#Dateitypen
+		#File types like "*.JPG"
 		[Parameter(Mandatory = $True, Position = 2)]
 		[String]$FileType,
 
-		#Quellordner der Dateien
+		#source path
 		[Parameter(Mandatory = $True, Position = 3)]
 		[String]$SourcePath,
 		
-		#Zielordner der Dateien
+		#destination path
 		[Parameter(Mandatory = $True, Position = 4)]
 		[String]$TargetPath,
 
-		#refernece to external counter for moved/copied files
+		#REFERENCE to external counter [int] for moved/copied files
 		[Parameter(Mandatory = $False, Position = 5)]
 		[REF]$ExternalCounter = 0
 		
 	)
 	#setup LOCAL counter
-	[int]$Counter = 0
+	[int]$LocalCounter = 0
 	
 	#Ensure the folder does exist
 	TestAndCreate-Path -FolderName $TargetPath
 
 	$Files = Get-ChildItem -Path $SourcePath -ErrorAction SilentlyContinue
 	foreach ($File in $Files) {
-		#Unterscheidung und Durchführung der Aktion
+		#depending on operation
 		if ($Action -eq "Copy") {
 			Copy-Item -Path $File.FullName -Destination $TargetPath -Include $FileType -Force -ErrorAction SilentlyContinue 
 			#increment all counters (local and external)
-			$Counter++
+			$LocalCounter++
 			$ExternalCounter.Value++
 		}
 		if ($Action -eq "Move") {
 			Move-Item -Path $File.FullName -Destination $TargetPath -Include $FileType -Force -ErrorAction SilentlyContinue
 			#increment all counters (local and external)
-			$Counter++
+			$LocalCounter++
 			$ExternalCounter.Value++
 		}
 	}
 	if ($Action -eq "Copy") {
-		Trace-LogMessage -Message "$Counter Dateien vom Ordner $SourcePath in den Ordner $TargetPath kopiert."
+		Trace-LogMessage -Message "Copied $LocalCounter files from $SourcePath to $TargetPath ."
 	}
 	if ($Action -eq "Move") {
-		Trace-LogMessage -Message  "$Counter Dateien vom Ordner $SourcePath in den Ordner $TargetPath verschoben."
+		Trace-LogMessage -Message "Moved $LocalCounter files from $SourcePath to $TargetPath ."
 	}
 }
 
 
 <#
 .SYNOPSIS
-	Funktion, um EXIF-Daten auszulesen
+	function to read EXIF information
+.DESCRIPTION
+	function to read EXIF information
 .PARAMETER $FileName
-	Dateiname
+	Name and path of the file
 .PARAMETER $Properties
-	Namen der Eigenschaften
+	array of names of the EXIF properties
+	The names depend on the language of the OS (here German is used)
 .PARAMETER $MaxPropertyCount
-	Anzahl der Eigenschaftsfelder (308 empirisch ermittelt)
+	maximum number of property field (308 is set as it worked fine)
+.OUTPUTS
+	HashTable Get-ExifDataFromFile returns a hashtable with the requested properties
+.EXAMPLE
+	Get-ExifDataFromFile -FileName $File2 -Properties "Lichtwert").Item("Lichtwert")
 .LINK
+	The process was influenced by:
 	* http://www.administrator.de/wissen/erweiterte-dateieigenschaften-powershell-funktion-abfragen-223082.html
 	* http://blogs.technet.com/b/heyscriptingguy/archive/2014/02/06/use-powershell-to-find-metadata-from-photograph-files.aspx
 	* https://gallery.technet.microsoft.com/scriptcenter/get-file-meta-data-function-f9e8d804
-.DESCRIPTION
-	TODO
 #>
-Function Get-MetaDataFromFile {
+Function Get-ExifDataFromFile {
 	Param(
-		[String]$FileName, #Dateiname
-		[String[]]$Properties, #Namen der Eigenschaften
-		[int]$MaxPropertyCount = 308 #Anzahl der Eigenschaftsfelder (empirisch ermittelt)
+		#file name
+		[Parameter(Mandatory = $True, Position = 1)]
+		[String]$FileName,
+
+		#Namen der Eigenschaften
+		[Parameter(Mandatory = $True, Position = 2)]
+		[String[]]$Properties, 
+
+		#Anzahl der Eigenschaftsfelder (empirisch ermittelt)
+		[Parameter(Mandatory = $False, Position = 3)]
+		[int]$MaxPropertyCount = 308
 	)
 	Process {
-		$HashTable = @{} #zum Speichern der Ergebnisse der Abfrage
+		#to save and return the results
+		$HashTable = @{}
 
 		$ObjShell = New-Object -ComObject Shell.Application
-		#Verzeichnis der Datei
+		#get the directory for the file
 		[String]$FolderName = ((Get-ChildItem -Path $FileName).Directory)
 		$ObjFolder = $ObjShell.namespace($FolderName)
-		#Durlaufen aller Dateien im Verzeichnis - sehr aufwändig, aber bisher alternativlos
+
+		#run through all files of the folder
+		#TODO: find a way to not run through all files - this really takes a long time
+		#TODO: direct access to property and not iterating through all would also increase performance
 		foreach ($File in $ObjFolder.items()) {
-			#filtern, dass nur die gewünschte Datei betrachtet wird
+			#filter only for the requested file
 			if($File.Path -eq $FileName) {
-				#Alle möglichen Eigenschaften heraussuchen
+				#get ALL properties of the file
 				for ($a ; $a  -le $MaxPropertyCount; $a++) {
-					#nur die Eigenschaften betrachten, welche die Datei auch hat
+					#get the properties of the file
 					if($ObjFolder.getDetailsOf($File, $a)) {
-						#Name der jeweiligen Eigenschaft ermitteln
+						#get the name of the iterated property
 						[String]$PropertyName = $($ObjFolder.getDetailsOf($ObjFolder.items, $a))
-						#nur die gewünschten Eigenschaften werden weiter betrachtet
+						#only consider the requested properties anymore
 						if($Properties.Contains($PropertyName)) {
-							#Speichern in die Hashtable, die zurückgegebnen wird
+							#save the property (key and value) to the hashtablke to return it
 							$HashTable.Add($PropertyName, $($ObjFolder.getDetailsOf($File, $a)))
 						}
 					}
 				}
 			}
 		}
-		#Rückgabe der ermittelten Werte
+		#return the values
 		return $HashTable
 	}
 }
@@ -202,6 +201,8 @@ Function Get-MetaDataFromFile {
 	bestimmen, welche umgebende Anzhal Dateien ermittelt wird
 .PARAMETER $DigitCount
 	Anzahl der Stellen in der Datei, die betrachtet werden (bisher keine Auswirkung)
+.OUTPUTS
+	TODO
 .DESCRIPTION
 	TODO
 #>
@@ -380,7 +381,7 @@ function Move-PhotoFiles {
 			#If there is a restriction to a set of cameras it will be checked too
 			if ($GoOnMovingFiles -and ($SetOfCameraModelsOnly.Count -gt 0)) {
 				#it is expected this never fails, as only used for JPG files and they always have EXIF data
-				$CameraModel = Get-MetaDataFromFile -FileName $File.FullName -Properties "Kameramodell"
+				$CameraModel = Get-ExifDataFromFile -FileName $File.FullName -Properties "Kameramodell"
 				if ($SetOfCameraModelsOnly.Contains($CameraModel.Item("Kameramodell"))) {
 					$GoOnMovingFiles = $True
 				} else {
@@ -394,7 +395,7 @@ function Move-PhotoFiles {
 				[String]$DestinationPath = $BasicPath + $DestinationSubPath
 				if ($CreateSubFoldersForEachDate) {
 					#den Namen des Unterordners abhängig vom Datum festlegen
-					$AufnahmeDatumPath =  Get-FolderNameFromDate -Date (Get-MetaDataFromFile -FileName $File.FullName -Properties "Aufnahmedatum").Item("Aufnahmedatum")
+					$AufnahmeDatumPath =  Get-FolderNameFromDate -Date (Get-ExifDataFromFile -FileName $File.FullName -Properties "Aufnahmedatum").Item("Aufnahmedatum")
 					Trace-LogMessage -Message "ausgelesenes Aufnahmedatum: $AufnahmeDatumPath" -Level 8 -MessageType Confirmation -Indent 8
 					$DestinationPath = $BasicPath + $AufnahmeDatumPath + "\" + "$DestinationSubPath"
 					Trace-LogMessage -Message "Zielpfad: $DestinationPath" -Level 8 -MessageType Confirmation -Indent 8
@@ -624,14 +625,14 @@ function Move-HDRFiles {
 				[String]$SubFolderHDRPartner = $BasicPath + "$DestinationSubPathPartner"
 				if ($AccessSubFoldersForEachDate) {
 					#den Namen des Unterordners abhängig vom Datum festlegen
-					$AufnahmeDatum =  Get-FolderNameFromDate -Date (Get-MetaDataFromFile -FileName $File.FullName -Properties "Aufnahmedatum").Item("Aufnahmedatum")
+					$AufnahmeDatum =  Get-FolderNameFromDate -Date (Get-ExifDataFromFile -FileName $File.FullName -Properties "Aufnahmedatum").Item("Aufnahmedatum")
 					$SubFolderHDR = $BasicPath + $AufnahmeDatum + "\$DestinationSubPath"
 					$SubFolderHDRPartner = $BasicPath + $AufnahmeDatum + "\$DestinationSubPathPartner"
 				}
 				#Annahme, dass EXIF-Daten ausgelesen werden können, da JPG-Dateien durchsucht werden
 				#dazu werden die Bilder mit Lichtwert "2 Schritt(e)" gesucht und geschaut ob die Bilder davor und danach dazu passen
 				#die 2 Schritte sind der letzte Werte, somit gibt es keine Probleme mit ausgeschnittenen Dateien in den nächsten Schleifendurchläufen
-				$Lichtwert = Get-MetaDataFromFile -FileName $file.FullName -Properties "Lichtwert"
+				$Lichtwert = Get-ExifDataFromFile -FileName $file.FullName -Properties "Lichtwert"
 				if ($Lichtwert.Item("Lichtwert") -eq "+2 Schritt(e)") {
 					#vorhergehende Datei und folgende Datei prüfen
 					#handelt es sich um eine HDR-Reihung, werdend die Bilder (beide Formate) verschoben
@@ -644,16 +645,16 @@ function Move-HDRFiles {
 					[Boolean]$GoOn = $True #ggf, kann frühzeitig abgebrochen werden
 					#ermitteln der jeweiligen Lichtwerte - falls die Datei existiert
 					if ((Test-Path -Path $File1) -and $goOn ) {
-						$value1 = (Get-MetaDataFromFile -FileName $File1 -Properties "Lichtwert").Item("Lichtwert")
+						$value1 = (Get-ExifDataFromFile -FileName $File1 -Properties "Lichtwert").Item("Lichtwert")
 					} else {$goOn = $False} #sonst brauchen wir es gar nicht weiter zu probieren
 					if ((Test-Path -Path $File2) -and $goOn) {
-						$value2 = (Get-MetaDataFromFile -FileName $File2 -Properties "Lichtwert").Item("Lichtwert")
+						$value2 = (Get-ExifDataFromFile -FileName $File2 -Properties "Lichtwert").Item("Lichtwert")
 					} else {$goOn = $False} #sonst brauchen wir es gar nicht weiter zu probieren
 					if ((Test-Path -Path $File3) -and $goOn) {
-						$value3 = (Get-MetaDataFromFile -FileName $File3 -Properties "Lichtwert").Item("Lichtwert")
+						$value3 = (Get-ExifDataFromFile -FileName $File3 -Properties "Lichtwert").Item("Lichtwert")
 					} else {$goOn = $False} #sonst brauchen wir es gar nicht weiter zu probieren
 					if ((Test-Path -Path $File4) -and $goOn) {
-						$value4 = (Get-MetaDataFromFile -FileName $File4 -Properties "Lichtwert").Item("Lichtwert")
+						$value4 = (Get-ExifDataFromFile -FileName $File4 -Properties "Lichtwert").Item("Lichtwert")
 					} else {$goOn = $False} #sonst brauchen wir es gar nicht weiter zu probieren
 					if ((Test-Path -Path $File5) -and $goOn) {
 						$value5 = $Lichtwert.Item("Lichtwert")
