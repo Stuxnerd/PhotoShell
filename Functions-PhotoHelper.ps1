@@ -112,10 +112,10 @@ Function Export-Files {
 		}
 	}
 	if ($Action -eq "Copy") {
-		Trace-LogMessage -Message "Copied $LocalCounter files from $SourcePath to $TargetPath ."
+		Trace-LogMessage -Message "Copied $LocalCounter files from $SourcePath to $TargetPath ." -Level 1
 	}
 	if ($Action -eq "Move") {
-		Trace-LogMessage -Message "Moved $LocalCounter files from $SourcePath to $TargetPath ."
+		Trace-LogMessage -Message "Moved $LocalCounter files from $SourcePath to $TargetPath ." -Level 1
 	}
 }
 
